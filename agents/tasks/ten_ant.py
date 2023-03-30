@@ -21,7 +21,7 @@ from isaacgym import gymapi
 
 class TenAnt(BaseTask):
 
-    def __init__(self, cfg, sim_params, physics_engine, device_type, device_id, headless, is_multi_agent=False):
+    def __init__(self, cfg, sim_params, physics_engine, device_type, device_id, headless=True, is_multi_agent=False):
 
         self.cfg = cfg
         self.sim_params = sim_params
@@ -160,32 +160,11 @@ class TenAnt(BaseTask):
         self.box_quat = torch.zeros((self.num_envs, 4), device=self.device, dtype=torch.float)
 
         # initialize some data used later on
-        self.up_vec_1 = to_torch(get_axis_params(1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
-        self.up_vec_2 = to_torch(get_axis_params(1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
-        self.up_vec_3 = to_torch(get_axis_params(1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
-        self.up_vec_4 = to_torch(get_axis_params(1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
-        self.up_vec_5 = to_torch(get_axis_params(1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
-        self.up_vec_6 = to_torch(get_axis_params(1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
-        self.up_vec_7 = to_torch(get_axis_params(1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
-        self.up_vec_8 = to_torch(get_axis_params(1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
-        self.up_vec_9 = to_torch(get_axis_params(1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
-        self.up_vec_10 = to_torch(get_axis_params(1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
-
-        self.heading_vec_1 = to_torch([1, 0, 0], device=self.device).repeat((self.num_envs, 1))
-        self.heading_vec_2 = to_torch([1, 0, 0], device=self.device).repeat((self.num_envs, 1))
-        self.heading_vec_3 = to_torch([1, 0, 0], device=self.device).repeat((self.num_envs, 1))
-        self.heading_vec_4 = to_torch([1, 0, 0], device=self.device).repeat((self.num_envs, 1))
-        self.heading_vec_5 = to_torch([1, 0, 0], device=self.device).repeat((self.num_envs, 1))
-        self.heading_vec_6 = to_torch([1, 0, 0], device=self.device).repeat((self.num_envs, 1))
-        self.heading_vec_7 = to_torch([1, 0, 0], device=self.device).repeat((self.num_envs, 1))
-        self.heading_vec_8 = to_torch([1, 0, 0], device=self.device).repeat((self.num_envs, 1))
-        self.heading_vec_9 = to_torch([1, 0, 0], device=self.device).repeat((self.num_envs, 1))
-        self.heading_vec_10 = to_torch([1, 0, 0], device=self.device).repeat((self.num_envs, 1))
-
+        self.up_vec = to_torch(get_axis_params(1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
+        self.heading_vec = to_torch([1, 0, 0], device=self.device).repeat((self.num_envs, 1))
         self.inv_start_rot = quat_conjugate(self.start_rotation_1).repeat((self.num_envs, 1))
-
-        self.basis_vec0 = self.heading_vec_1.clone()
-        self.basis_vec1 = self.up_vec_1.clone()
+        self.basis_vec0 = self.heading_vec.clone()
+        self.basis_vec1 = self.up_vec.clone()
 
         self.targets = to_torch([0, 0, 0], device=self.device).repeat((self.num_envs, 1))
         self.box_targets = to_torch([0, 0], device=self.device).repeat((self.num_envs, 1))
@@ -287,11 +266,52 @@ class TenAnt(BaseTask):
         self.num_dof_1 = self.gym.get_asset_dof_count(ant_asset_1)
         # print('self.num_dof:',self.num_dof)
 
-        # Note - for this asset we are loading the actuator info from the MJCF
+        # force
         actuator_props_1 = self.gym.get_asset_actuator_properties(ant_asset_1)
+        motor_efforts_1 = [prop.motor_effort for prop in actuator_props_1]
+        self.joint_gears_1 = to_torch(motor_efforts_1, device=self.device)
+
         actuator_props_2 = self.gym.get_asset_actuator_properties(ant_asset_2)
-        motor_efforts = [prop.motor_effort for prop in actuator_props_1]
-        self.joint_gears = to_torch(motor_efforts, device=self.device)
+        motor_efforts_2 = [prop.motor_effort for prop in actuator_props_2]
+        self.joint_gears_2 = to_torch(motor_efforts_2, device=self.device)
+
+        actuator_props_3 = self.gym.get_asset_actuator_properties(ant_asset_3)
+        motor_efforts_3 = [prop.motor_effort for prop in actuator_props_3]
+        self.joint_gears_3 = to_torch(motor_efforts_3, device=self.device)
+
+        actuator_props_4 = self.gym.get_asset_actuator_properties(ant_asset_4)
+        motor_efforts_4 = [prop.motor_effort for prop in actuator_props_4]
+        self.joint_gears_4 = to_torch(motor_efforts_4, device=self.device)
+
+        actuator_props_5 = self.gym.get_asset_actuator_properties(ant_asset_5)
+        motor_efforts_5 = [prop.motor_effort for prop in actuator_props_5]
+        self.joint_gears_5 = to_torch(motor_efforts_5, device=self.device)
+
+        actuator_props_6 = self.gym.get_asset_actuator_properties(ant_asset_6)
+        motor_efforts_6 = [prop.motor_effort for prop in actuator_props_6]
+        self.joint_gears_6 = to_torch(motor_efforts_6, device=self.device)
+
+        actuator_props_7 = self.gym.get_asset_actuator_properties(ant_asset_7)
+        motor_efforts_7 = [prop.motor_effort for prop in actuator_props_7]
+        self.joint_gears_7 = to_torch(motor_efforts_7, device=self.device)
+
+        actuator_props_8 = self.gym.get_asset_actuator_properties(ant_asset_8)
+        motor_efforts_8 = [prop.motor_effort for prop in actuator_props_8]
+        self.joint_gears_8 = to_torch(motor_efforts_8, device=self.device)
+
+        actuator_props_9 = self.gym.get_asset_actuator_properties(ant_asset_9)
+        motor_efforts_9 = [prop.motor_effort for prop in actuator_props_9]
+        self.joint_gears_9 = to_torch(motor_efforts_9, device=self.device)
+
+        actuator_props_10 = self.gym.get_asset_actuator_properties(ant_asset_10)
+        motor_efforts_10 = [prop.motor_effort for prop in actuator_props_10]
+        self.joint_gears_10 = to_torch(motor_efforts_10, device=self.device)
+
+        self.joint_gears = torch.cat((self.joint_gears_1,self.joint_gears_2,self.joint_gears_3,
+                                      self.joint_gears_4,self.joint_gears_5,self.joint_gears_6,
+                                      self.joint_gears_7,self.joint_gears_8,self.joint_gears_9,
+                                      self.joint_gears_10),dim=-1)
+        
 
         start_pose_1 = gymapi.Transform()
         start_pose_1.p = gymapi.Vec3(6, -1.5, 1.)
@@ -614,70 +634,70 @@ class TenAnt(BaseTask):
         # print("Feet forces and torques: ", self.vec_sensor_tensor[0, :])
         # print(self.vec_sensor_tensor.shape)
 
-        self.obs_buf_1[:], self.up_vec_1[:], self.heading_vec_1[:]= compute_ant_observations(
+        self.obs_buf_1[:] = compute_ant_observations(
             self.obs_buf_1, self.root_states[0::(self.num_agents + 1), :], self.targets, 
             self.inv_start_rot, self.dof_pos_1, self.dof_vel_1,
             self.dof_limits_lower, self.dof_limits_upper, self.dof_vel_scale,
             self.actions[:,:8], self.dt, self.contact_force_scale,
             self.basis_vec0, self.basis_vec1, self.up_axis_idx)
         
-        self.obs_buf_2[:], self.up_vec_2[:], self.heading_vec_2[:]= compute_ant_observations(
+        self.obs_buf_2[:] = compute_ant_observations(
             self.obs_buf_2, self.root_states[1::(self.num_agents + 1), :], self.targets, 
             self.inv_start_rot, self.dof_pos_2, self.dof_vel_2,
             self.dof_limits_lower, self.dof_limits_upper, self.dof_vel_scale,
             self.actions[:,8:16], self.dt, self.contact_force_scale,
             self.basis_vec0, self.basis_vec1, self.up_axis_idx)
 
-        self.obs_buf_3[:], self.up_vec_3[:], self.heading_vec_3[:]= compute_ant_observations(
+        self.obs_buf_3[:] = compute_ant_observations(
             self.obs_buf_3, self.root_states[2::(self.num_agents + 1), :], self.targets, 
             self.inv_start_rot, self.dof_pos_3, self.dof_vel_3,
             self.dof_limits_lower, self.dof_limits_upper, self.dof_vel_scale,
             self.actions[:,16:24], self.dt, self.contact_force_scale,
             self.basis_vec0, self.basis_vec1, self.up_axis_idx)
         
-        self.obs_buf_4[:], self.up_vec_4[:], self.heading_vec_4[:]= compute_ant_observations(
+        self.obs_buf_4[:] = compute_ant_observations(
             self.obs_buf_4, self.root_states[3::(self.num_agents + 1), :], self.targets, 
             self.inv_start_rot, self.dof_pos_4, self.dof_vel_4,
             self.dof_limits_lower, self.dof_limits_upper, self.dof_vel_scale,
             self.actions[:,24:32], self.dt, self.contact_force_scale,
             self.basis_vec0, self.basis_vec1, self.up_axis_idx)
         
-        self.obs_buf_5[:], self.up_vec_5[:], self.heading_vec_5[:]= compute_ant_observations(
+        self.obs_buf_5[:] = compute_ant_observations(
             self.obs_buf_5, self.root_states[4::(self.num_agents + 1), :], self.targets, 
             self.inv_start_rot, self.dof_pos_5, self.dof_vel_5,
             self.dof_limits_lower, self.dof_limits_upper, self.dof_vel_scale,
             self.actions[:,32:40], self.dt, self.contact_force_scale,
             self.basis_vec0, self.basis_vec1, self.up_axis_idx)
         
-        self.obs_buf_6[:], self.up_vec_6[:], self.heading_vec_6[:]= compute_ant_observations(
+        self.obs_buf_6[:] = compute_ant_observations(
             self.obs_buf_6, self.root_states[5::(self.num_agents + 1), :], self.targets, 
             self.inv_start_rot, self.dof_pos_6, self.dof_vel_6,
             self.dof_limits_lower, self.dof_limits_upper, self.dof_vel_scale,
             self.actions[:,40:48], self.dt, self.contact_force_scale,
             self.basis_vec0, self.basis_vec1, self.up_axis_idx)
         
-        self.obs_buf_7[:], self.up_vec_7[:], self.heading_vec_7[:]= compute_ant_observations(
+        self.obs_buf_7[:] = compute_ant_observations(
             self.obs_buf_7, self.root_states[6::(self.num_agents + 1), :], self.targets, 
             self.inv_start_rot, self.dof_pos_7, self.dof_vel_7,
             self.dof_limits_lower, self.dof_limits_upper, self.dof_vel_scale,
             self.actions[:,48:56], self.dt, self.contact_force_scale,
             self.basis_vec0, self.basis_vec1, self.up_axis_idx)
         
-        self.obs_buf_8[:], self.up_vec_8[:], self.heading_vec_8[:]= compute_ant_observations(
+        self.obs_buf_8[:] = compute_ant_observations(
             self.obs_buf_8, self.root_states[7::(self.num_agents + 1), :], self.targets, 
             self.inv_start_rot, self.dof_pos_8, self.dof_vel_8,
             self.dof_limits_lower, self.dof_limits_upper, self.dof_vel_scale,
             self.actions[:,56:64], self.dt, self.contact_force_scale,
             self.basis_vec0, self.basis_vec1, self.up_axis_idx)
         
-        self.obs_buf_9[:], self.up_vec_9[:], self.heading_vec_9[:]= compute_ant_observations(
+        self.obs_buf_9[:] = compute_ant_observations(
             self.obs_buf_9, self.root_states[8::(self.num_agents + 1), :], self.targets, 
             self.inv_start_rot, self.dof_pos_9, self.dof_vel_9,
             self.dof_limits_lower, self.dof_limits_upper, self.dof_vel_scale,
             self.actions[:,64:72], self.dt, self.contact_force_scale,
             self.basis_vec0, self.basis_vec1, self.up_axis_idx)
         
-        self.obs_buf_10[:], self.up_vec_10[:], self.heading_vec_10[:]= compute_ant_observations(
+        self.obs_buf_10[:] = compute_ant_observations(
             self.obs_buf_10, self.root_states[9::(self.num_agents + 1), :], self.targets, 
             self.inv_start_rot, self.dof_pos_10, self.dof_vel_10,
             self.dof_limits_lower, self.dof_limits_upper, self.dof_vel_scale,
@@ -769,11 +789,10 @@ class TenAnt(BaseTask):
     def pre_physics_step(self, actions):
         self.actions = actions.clone().to(self.device)
         # self.actions = torch.cat((self.actions, self.actions), dim=-1)
-        # forces = self.actions * self.joint_gears * self.power_scale
-        # force_tensor = gymtorch.unwrap_tensor(forces)
-        # self.gym.set_dof_actuation_force_tensor(self.sim, force_tensor)
-        targets = self.actions
-        self.gym.set_dof_position_target_tensor(self.sim, gymtorch.unwrap_tensor(targets))
+        forces = self.actions * self.joint_gears * self.power_scale
+        force_tensor = gymtorch.unwrap_tensor(forces)
+        self.gym.set_dof_actuation_force_tensor(self.sim, force_tensor)
+
 
     def post_physics_step(self):
         # print('**44')
@@ -944,7 +963,7 @@ def compute_ant_observations(obs_buf, root_states, targets,
                              dof_limits_lower, dof_limits_upper, dof_vel_scale,
                              actions, dt, contact_force_scale,
                              basis_vec0, basis_vec1, up_axis_idx):
-    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, Tensor, float, float, Tensor, Tensor, int) -> Tuple[Tensor, Tensor, Tensor]
+    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, Tensor, float, float, Tensor, Tensor, int) -> Tensor
 
     torso_position = root_states[:, 0:3]
     # print('***:',torso_position[0:4])
@@ -982,7 +1001,7 @@ def compute_ant_observations(obs_buf, root_states, targets,
     # print('**obs:', obs.shape)
     # print('**obs', obs[:4])
 
-    return obs, up_vec, heading_vec
+    return obs
 
 
 @torch.jit.script
