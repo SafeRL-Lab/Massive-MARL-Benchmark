@@ -14,7 +14,7 @@ import random
 import torch
 
 from agents.utils.torch_jit_utils import *
-from agents.tasks.hand_base.base_task import BaseTask
+from agents.tasks.agent_base.base_task import BaseTask
 from isaacgym import gymtorch
 from isaacgym import gymapi
 
