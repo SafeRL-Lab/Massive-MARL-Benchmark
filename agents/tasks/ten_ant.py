@@ -170,6 +170,18 @@ class TenAnt(BaseTask):
         self.box_targets = to_torch([0, 0], device=self.device).repeat((self.num_envs, 1))
         self.target_dirs = to_torch([1, 0, 0], device=self.device).repeat((self.num_envs, 1))
 
+        #init every ant push box pos;;;compute box pos
+        self.goal_1 = torch.zeros((self.num_envs, 2), device=self.device,dtype=torch.float)
+        self.goal_2 = torch.zeros((self.num_envs, 2), device=self.device,dtype=torch.float)
+        self.goal_3 = torch.zeros((self.num_envs, 2), device=self.device,dtype=torch.float)
+        self.goal_4 = torch.zeros((self.num_envs, 2), device=self.device,dtype=torch.float)
+        self.goal_5 = torch.zeros((self.num_envs, 2), device=self.device,dtype=torch.float)
+        self.goal_6 = torch.zeros((self.num_envs, 2), device=self.device,dtype=torch.float)
+        self.goal_7 = torch.zeros((self.num_envs, 2), device=self.device,dtype=torch.float)
+        self.goal_8 = torch.zeros((self.num_envs, 2), device=self.device,dtype=torch.float)
+        self.goal_9 = torch.zeros((self.num_envs, 2), device=self.device,dtype=torch.float)
+        self.goal_10 = torch.zeros((self.num_envs, 2), device=self.device,dtype=torch.float)
+
         self.potentials = to_torch([-6 / self.dt], device=self.device).repeat(self.num_envs)
         self.prev_potentials = self.potentials.clone()
 
@@ -336,7 +348,6 @@ class TenAnt(BaseTask):
 
         self.start_rotation_1 = torch.tensor([start_pose_1.r.x, start_pose_1.r.y, start_pose_1.r.z, start_pose_1.r.w],
                                            device=self.device)
-
         self.torso_index = 0
 
         self.num_bodies_1 = self.gym.get_asset_rigid_body_count(ant_asset_1)
@@ -457,10 +468,11 @@ class TenAnt(BaseTask):
         # box
         asset_options = gymapi.AssetOptions()
         asset_options.density = 1.
-        asset_box = self.gym.create_box(self.sim, 1, 28, 1, asset_options)
+        asset_box = self.gym.create_box(self.sim, 1, 2, 1, asset_options)
         box_pose = gymapi.Transform()
         box_pose.p = gymapi.Vec3(4, 0, 1)
-
+        
+        
         for i in range(self.num_envs):
             # create env instance
             env_ptr = self.gym.create_env(
@@ -704,8 +716,22 @@ class TenAnt(BaseTask):
             self.actions[:,72:80], self.dt, self.contact_force_scale,
             self.basis_vec0, self.basis_vec1, self.up_axis_idx)
         
-        self.box_pos[:], self.box_quat[:] = compute_box_pos(self.root_states[10::(self.num_agents + 1), :])
-    
+        #quat**************+++10 goal 
+        self.box_pos[:], self.box_quat[:], self.goal_1, self.goal_2, self.goal_3, self.goal_4 = compute_box_pos(self.root_states[10::(self.num_agents + 1), :])
+        self.goal_5, self.goal_6, self.goal_7, self.goal_8,self.goal_9, self.goal_10 = compute_other_goal(self.root_states[10::(self.num_agents + 1), :])
+        # print('**box_root_states:',self.root_states[10:(self.num_agents + 1):54, :])
+        # print('**self.box_pos:',self.box_pos[:4,:])
+        # print('**self.self.box_quat:',self.box_quat[:4,:])
+        # print('**self.goal_1:',self.goal_1[:4,:])
+        # print('**self.goal_2:',self.goal_2[:4,:])
+        # print('**self.goal_3:',self.goal_3[:4,:])
+        # print('**self.goal_4:',self.goal_4[:4,:])
+        # print('**self.goal_5:',self.goal_5[:4,:])
+        # print('**self.goal_6:',self.goal_6[:4,:])
+        # print('**self.goal_7:',self.goal_7[:4,:])
+        # print('**self.goal_8:',self.goal_8[:4,:])
+        # print('**self.goal_9:',self.goal_9[:4,:])
+        # print('**self.goal_10:',self.goal_10[:4,:])
 
         self.obs_buf = torch.cat((self.obs_buf_1,self.obs_buf_2,self.obs_buf_3,self.obs_buf_4,self.obs_buf_5,
                                   self.obs_buf_6,self.obs_buf_7,self.obs_buf_8,self.obs_buf_9,self.obs_buf_10
@@ -823,6 +849,22 @@ class TenAnt(BaseTask):
 #####################################################################
 ###=========================jit functions=========================###
 #####################################################################
+
+
+@torch.jit.script
+def compute_box_angle(box_quat):
+    # type: (Tensor) -> Tensor
+    qw = box_quat[:, 3].clone()
+    qx = box_quat[:, 0].clone()
+    qy = box_quat[:, 1].clone()
+    qz = box_quat[:, 2].clone()
+    y = 2*qw*qz
+    x = 1-2*qz*qz
+    angle_tan_value = y/x
+    angle = torch.atan(angle_tan_value)
+
+    return angle
+    
 
 
 @torch.jit.script
@@ -1006,8 +1048,42 @@ def compute_ant_observations(obs_buf, root_states, targets,
 
 @torch.jit.script
 def compute_box_pos(root_states):
-    # type: (Tensor) -> Tuple[Tensor, Tensor]
+    # type: (Tensor) -> Tuple[Tensor, Tensor,Tensor, Tensor,Tensor, Tensor]
     box_pos = root_states[:, :2]
     box_quat = root_states[:, 3:7]
+    angle = compute_box_angle(box_quat)
+    sin_value = torch.sin(angle)
+    cos_value = -torch.cos(angle)
+    sin_value = sin_value.unsqueeze(1)
+    cos_value = cos_value.unsqueeze(1)
+    goal_dist_0 = torch.cat((sin_value,cos_value),dim=-1)
+    
+    goal_1 = box_pos + 1.5*goal_dist_0
+    goal_2 = box_pos - 1.5*goal_dist_0
+    goal_3 = box_pos + 4.5*goal_dist_0
+    goal_4 = box_pos - 4.5*goal_dist_0
+    
 
-    return box_pos, box_quat
+    return box_pos, box_quat, goal_1, goal_2, goal_3, goal_4
+
+@torch.jit.script
+def compute_other_goal(root_states):
+    # type: (Tensor) -> Tuple[Tensor, Tensor,Tensor, Tensor,Tensor, Tensor]
+    box_pos = root_states[:, :2]
+    box_quat = root_states[:, 3:7]
+    angle = compute_box_angle(box_quat)
+    sin_value = torch.sin(angle)
+    cos_value = -torch.cos(angle)
+    sin_value = sin_value.unsqueeze(1)
+    cos_value = cos_value.unsqueeze(1)
+    goal_dist_0 = torch.cat((sin_value,cos_value),dim=-1)
+    
+    goal_5 = box_pos + 7.5*goal_dist_0
+    goal_6 = box_pos - 7.5*goal_dist_0
+    goal_7 = box_pos + 10.5*goal_dist_0
+    goal_8 = box_pos - 10.5*goal_dist_0
+    goal_9 = box_pos + 13.5*goal_dist_0
+    goal_10 = box_pos - 13.5*goal_dist_0
+    
+
+    return goal_5, goal_6, goal_7, goal_8, goal_9, goal_10
