@@ -158,6 +158,7 @@ class TenAnt(BaseTask):
 
         self.box_pos = torch.zeros((self.num_envs, 2), device=self.device, dtype=torch.float)
         self.box_quat = torch.zeros((self.num_envs, 4), device=self.device, dtype=torch.float)
+        self.box_quat_before = torch.zeros((self.num_envs, 4), device=self.device, dtype=torch.float)
 
         # initialize some data used later on
         self.up_vec = to_torch(get_axis_params(1., self.up_axis_idx), device=self.device).repeat((self.num_envs, 1))
@@ -168,6 +169,16 @@ class TenAnt(BaseTask):
 
         self.targets = to_torch([0, 0, 0], device=self.device).repeat((self.num_envs, 1))
         self.box_targets = to_torch([0, 0], device=self.device).repeat((self.num_envs, 1))
+        self.box_targets_1 = to_torch([0, -1.5], device=self.device).repeat((self.num_envs, 1))
+        self.box_targets_2 = to_torch([0, 1.5], device=self.device).repeat((self.num_envs, 1))
+        self.box_targets_3 = to_torch([0, -4.5], device=self.device).repeat((self.num_envs, 1))
+        self.box_targets_4 = to_torch([0, 4.5], device=self.device).repeat((self.num_envs, 1))
+        self.box_targets_5 = to_torch([0, -7.5], device=self.device).repeat((self.num_envs, 1))
+        self.box_targets_6 = to_torch([0, 7.5], device=self.device).repeat((self.num_envs, 1))
+        self.box_targets_7 = to_torch([0, -10.5], device=self.device).repeat((self.num_envs, 1))
+        self.box_targets_8 = to_torch([0, 10.5], device=self.device).repeat((self.num_envs, 1))
+        self.box_targets_9 = to_torch([0, -13.5], device=self.device).repeat((self.num_envs, 1))
+        self.box_targets_10 = to_torch([0, 13.5], device=self.device).repeat((self.num_envs, 1))
         self.target_dirs = to_torch([1, 0, 0], device=self.device).repeat((self.num_envs, 1))
 
         #init every ant push box pos;;;compute box pos
@@ -461,6 +472,17 @@ class TenAnt(BaseTask):
         self.pos_before_9 = torch.zeros(2, device=self.device)
         self.pos_before_10 = torch.zeros(2, device=self.device)
 
+        self.goal_before_1 = torch.zeros(2, device=self.device)
+        self.goal_before_2 = torch.zeros(2, device=self.device)
+        self.goal_before_3 = torch.zeros(2, device=self.device)
+        self.goal_before_4 = torch.zeros(2, device=self.device)
+        self.goal_before_5 = torch.zeros(2, device=self.device)
+        self.goal_before_6 = torch.zeros(2, device=self.device)
+        self.goal_before_7 = torch.zeros(2, device=self.device)
+        self.goal_before_8 = torch.zeros(2, device=self.device)
+        self.goal_before_9 = torch.zeros(2, device=self.device)
+        self.goal_before_10 = torch.zeros(2, device=self.device)
+
         self.box_before = torch.zeros(2, device=self.device)
         self.dof_limits_lower = []
         self.dof_limits_upper = []
@@ -613,6 +635,15 @@ class TenAnt(BaseTask):
     def compute_reward(self, actions):
         self.rew_buf[:], self.reset_buf[:] = compute_ant_reward(
             self.obs_buf_1,
+            self.obs_buf_2,
+            self.obs_buf_3,
+            self.obs_buf_4,
+            self.obs_buf_5,
+            self.obs_buf_6,
+            self.obs_buf_7,
+            self.obs_buf_8,
+            self.obs_buf_9,
+            self.obs_buf_10,
             self.reset_buf,
             self.progress_buf,
             self.actions,
@@ -625,6 +656,25 @@ class TenAnt(BaseTask):
             self.death_cost,
             self.max_episode_length,
             self.pos_before_1,
+            self.pos_before_2,
+            self.pos_before_3,
+            self.pos_before_4,
+            self.pos_before_5,
+            self.pos_before_6,
+            self.pos_before_7,
+            self.pos_before_8,
+            self.pos_before_9,
+            self.pos_before_10,
+            self.goal_before_1,
+            self.goal_before_2,
+            self.goal_before_3,
+            self.goal_before_4,
+            self.goal_before_5,
+            self.goal_before_6,
+            self.goal_before_7,
+            self.goal_before_8,
+            self.goal_before_9,
+            self.goal_before_10,
             self.box_before,
             self.box_pos,
             self.dt,
@@ -636,7 +686,27 @@ class TenAnt(BaseTask):
             self.quat_reward_scale,
             self.ant_dist_reward_scale,
             self.box_targets,
-            self.goal_dist_reward_scale
+            self.box_targets_1,
+            self.box_targets_2,
+            self.box_targets_3,
+            self.box_targets_4,
+            self.box_targets_5,
+            self.box_targets_6,
+            self.box_targets_7,
+            self.box_targets_8,
+            self.box_targets_9,
+            self.box_targets_10,
+            self.goal_dist_reward_scale,
+            self.goal_1,
+            self.goal_2,
+            self.goal_3,
+            self.goal_4,
+            self.goal_5,
+            self.goal_6,
+            self.goal_7,
+            self.goal_8,
+            self.goal_9,
+            self.goal_10,
         )
 
     def compute_observations(self):
@@ -808,7 +878,8 @@ class TenAnt(BaseTask):
         self.pos_before_9 = self.root_states[8::11, :2].clone()
         self.pos_before_10 = self.root_states[9::11, :2].clone()
 
-        self.box_before = self.root_states[10::11, :2].clone()
+        self.box_before, self.box_quat_before, self.goal_before_1, self.goal_before_2,self.goal_before_3,self.goal_before_4= compute_box_pos(self.root_states[10::11,:])
+        self.goal_before_5, self.goal_before_6,self.goal_before_7,self.goal_before_8,self.goal_before_9,self.goal_before_10= compute_other_goal(self.root_states[10::11,:])
         self.progress_buf[env_ids] = 0
         self.reset_buf[env_ids] = 0
 
@@ -843,6 +914,16 @@ class TenAnt(BaseTask):
         self.pos_before_9 = self.obs_buf_9[:self.num_envs, :2].clone()
         self.pos_before_10 = self.obs_buf_10[:self.num_envs, :2].clone()
         self.box_before = self.box_pos[:self.num_envs, :2].clone()
+        self.goal_before_1 = self.goal_1
+        self.goal_before_2 = self.goal_2
+        self.goal_before_3 = self.goal_3
+        self.goal_before_4 = self.goal_4
+        self.goal_before_5 = self.goal_5
+        self.goal_before_6 = self.goal_6
+        self.goal_before_7 = self.goal_7
+        self.goal_before_8 = self.goal_8
+        self.goal_before_9 = self.goal_9
+        self.goal_before_10 = self.goal_10
         # print('**33:',self.pos_before.shape)
 
 
@@ -906,7 +987,16 @@ def l2_dist(
 
 @torch.jit.script
 def compute_ant_reward(
-        obs_buf,
+        obs_buf_1,
+        obs_buf_2,
+        obs_buf_3,
+        obs_buf_4,
+        obs_buf_5,
+        obs_buf_6,
+        obs_buf_7,
+        obs_buf_8,
+        obs_buf_9,
+        obs_buf_10,
         reset_buf,
         progress_buf,
         actions,
@@ -918,7 +1008,26 @@ def compute_ant_reward(
         termination_height,
         death_cost,
         max_episode_length,
-        pos_before,
+        pos_before_1,
+        pos_before_2,
+        pos_before_3,
+        pos_before_4,
+        pos_before_5,
+        pos_before_6,
+        pos_before_7,
+        pos_before_8,
+        pos_before_9,
+        pos_before_10,
+        goal_before_1,
+        goal_before_2,
+        goal_before_3,
+        goal_before_4,
+        goal_before_5,
+        goal_before_6,
+        goal_before_7,
+        goal_before_8,
+        goal_before_9,
+        goal_before_10,
         box_before,
         box_pos,
         dt,
@@ -930,9 +1039,30 @@ def compute_ant_reward(
         quat_reward_scale,
         ant_dist_reward_scale,
         box_targets,
-        goal_dist_reward_scale
+        box_targets_1,
+        box_targets_2,
+        box_targets_3,
+        box_targets_4,
+        box_targets_5,
+        box_targets_6,
+        box_targets_7,
+        box_targets_8,
+        box_targets_9,
+        box_targets_10,
+        goal_dist_reward_scale,
+        goal_1,
+        goal_2,
+        goal_3,
+        goal_4,
+        goal_5,
+        goal_6,
+        goal_7,
+        goal_8,
+        goal_9,
+        goal_10
+
 ):
-     # type: (Tensor, Tensor, Tensor, Tensor, float, float, float, float, float, float, float, float, Tensor, Tensor, Tensor, float, float, Tensor, float, float, float, float, float, Tensor, float) -> Tuple[Tensor, Tensor]
+     # type: (Tensor, Tensor,Tensor,Tensor,Tensor,Tensor,Tensor,Tensor,Tensor,Tensor,Tensor, Tensor, Tensor, float, float, float, float, float, float, float, float, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, float, Tensor, float, float, float, float, float, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float, Tensor, Tensor, Tensor, Tensor,Tensor, Tensor, Tensor, Tensor,Tensor, Tensor) -> Tuple[Tensor, Tensor]
 
     # quat reward
     x, y, z = compute_box_quat(box_quat)
@@ -940,60 +1070,232 @@ def compute_ant_reward(
     quat_reward = quat_reward_scale * quat_dist
 
     # ant and box reward
-    # ant_push = l2_dist(ant_pos, box_pos) < 1.5
-    # ant_push = abs(ant_push - 1)
-    # print('**ant_push:', ant_push.shape, ant_push[:4])
-    # ant_dist = l2_dist(pos_before, box_before) - l2_dist(ant_pos, box_pos)
-    # ant_dist_reward = ant_dist_reward_scale * ant_dist * ant_push
-    # print("ant_dist_reward:",ant_dist_reward.shape, ant_dist_reward[:4])
+    ant_push_1 = l2_dist(obs_buf_1[:,:2], goal_1) < 1.5
+    ant_push_1 = abs(ant_push_1 - 1)
+    ant_dist_1 = l2_dist(pos_before_1, goal_before_1) - l2_dist(obs_buf_1[:,:2], goal_1)
+    ant_dist_reward_1 = ant_dist_reward_scale * ant_dist_1 * ant_push_1
+    goal_dist_before_1 = l2_dist(box_targets_1, goal_before_1)
+    goal_dist_1 = l2_dist(box_targets_1, goal_1)
+    goal_arrive_1 = goal_dist_1 < 0.5
+    goal_dist_reward_1 = goal_dist_reward_scale * (goal_dist_before_1 - goal_dist_1)
+    goal_arrive_reward_1 = 2 * goal_arrive_1
 
-    goal_dist_before = l2_dist(box_targets, box_before)
-    goal_dist = l2_dist(box_targets, box_pos)
-    goal_arrive = goal_dist < 0.5
-    goal_dist_reward = goal_dist_reward_scale * (goal_dist_before - goal_dist)
-    goal_arrive_reward = 2 * goal_arrive
+    ant_push_2 = l2_dist(obs_buf_2[:,:2], goal_2) < 1.5
+    ant_push_2 = abs(ant_push_2 - 1)
+    ant_dist_2 = l2_dist(pos_before_2, goal_before_2) - l2_dist(obs_buf_2[:,:2], goal_2)
+    ant_dist_reward_2 = ant_dist_reward_scale * ant_dist_2 * ant_push_2
+    goal_dist_before_2 = l2_dist(box_targets_2, goal_before_2)
+    goal_dist_2 = l2_dist(box_targets_2, goal_2)
+    goal_arrive_2 = goal_dist_2 < 0.5
+    goal_dist_reward_2 = goal_dist_reward_scale * (goal_dist_before_2 - goal_dist_2)
+    goal_arrive_reward_2 = 2 * goal_arrive_2
+
+    ant_push_3 = l2_dist(obs_buf_3[:,:2], goal_3) < 1.5
+    ant_push_3 = abs(ant_push_3 - 1)
+    ant_dist_3 = l2_dist(pos_before_3, goal_before_3) - l2_dist(obs_buf_3[:,:2], goal_3)
+    ant_dist_reward_3 = ant_dist_reward_scale * ant_dist_3 * ant_push_3
+    goal_dist_before_3 = l2_dist(box_targets_3, goal_before_3)
+    goal_dist_3 = l2_dist(box_targets_3, goal_3)
+    goal_arrive_3 = goal_dist_3 < 0.5
+    goal_dist_reward_3 = goal_dist_reward_scale * (goal_dist_before_3 - goal_dist_3)
+    goal_arrive_reward_3 = 2 * goal_arrive_3
+
+    ant_push_4 = l2_dist(obs_buf_4[:,:2], goal_4) < 1.5
+    ant_push_4 = abs(ant_push_4 - 1)
+    ant_dist_4 = l2_dist(pos_before_4, goal_before_4) - l2_dist(obs_buf_4[:,:2], goal_4)
+    ant_dist_reward_4 = ant_dist_reward_scale * ant_dist_4 * ant_push_4
+    goal_dist_before_4 = l2_dist(box_targets_4, goal_before_4)
+    goal_dist_4 = l2_dist(box_targets_4, goal_4)
+    goal_arrive_4 = goal_dist_4 < 0.5
+    goal_dist_reward_4 = goal_dist_reward_scale * (goal_dist_before_4 - goal_dist_4)
+    goal_arrive_reward_4 = 2 * goal_arrive_4
+
+    ant_push_5 = l2_dist(obs_buf_5[:,:2], goal_5) < 1.5
+    ant_push_5 = abs(ant_push_5 - 1)
+    ant_dist_5 = l2_dist(pos_before_5, goal_before_5) - l2_dist(obs_buf_5[:,:2], goal_5)
+    ant_dist_reward_5 = ant_dist_reward_scale * ant_dist_5 * ant_push_5
+    goal_dist_before_5 = l2_dist(box_targets_5, goal_before_5)
+    goal_dist_5 = l2_dist(box_targets_5, goal_5)
+    goal_arrive_5 = goal_dist_5 < 0.5
+    goal_dist_reward_5 = goal_dist_reward_scale * (goal_dist_before_5 - goal_dist_5)
+    goal_arrive_reward_5 = 2 * goal_arrive_5
+
+    ant_push_6 = l2_dist(obs_buf_6[:,:2], goal_6) < 1.5
+    ant_push_6 = abs(ant_push_6 - 1)
+    ant_dist_6 = l2_dist(pos_before_6, goal_before_6) - l2_dist(obs_buf_6[:,:2], goal_6)
+    ant_dist_reward_6 = ant_dist_reward_scale * ant_dist_6 * ant_push_6
+    goal_dist_before_6 = l2_dist(box_targets_6, goal_before_6)
+    goal_dist_6 = l2_dist(box_targets_6, goal_6)
+    goal_arrive_6 = goal_dist_6 < 0.5
+    goal_dist_reward_6 = goal_dist_reward_scale * (goal_dist_before_6 - goal_dist_6)
+    goal_arrive_reward_6 = 2 * goal_arrive_6
+
+    ant_push_7 = l2_dist(obs_buf_7[:,:2], goal_7) < 1.5
+    ant_push_7 = abs(ant_push_7 - 1)
+    ant_dist_7 = l2_dist(pos_before_7, goal_before_7) - l2_dist(obs_buf_7[:,:2], goal_7)
+    ant_dist_reward_7 = ant_dist_reward_scale * ant_dist_7 * ant_push_7
+    goal_dist_before_7 = l2_dist(box_targets_7, goal_before_7)
+    goal_dist_7 = l2_dist(box_targets_7, goal_7)
+    goal_arrive_7 = goal_dist_7 < 0.5
+    goal_dist_reward_7 = goal_dist_reward_scale * (goal_dist_before_7 - goal_dist_7)
+    goal_arrive_reward_7 = 2 * goal_arrive_7
+
+    ant_push_8 = l2_dist(obs_buf_8[:,:2], goal_8) < 1.5
+    ant_push_8 = abs(ant_push_8 - 1)
+    ant_dist_8 = l2_dist(pos_before_8, goal_before_8) - l2_dist(obs_buf_8[:,:2], goal_8)
+    ant_dist_reward_8 = ant_dist_reward_scale * ant_dist_8 * ant_push_8
+    goal_dist_before_8 = l2_dist(box_targets_8, goal_before_8)
+    goal_dist_8 = l2_dist(box_targets_8, goal_8)
+    goal_arrive_8 = goal_dist_8 < 0.5
+    goal_dist_reward_8 = goal_dist_reward_scale * (goal_dist_before_8 - goal_dist_8)
+    goal_arrive_reward_8 = 2 * goal_arrive_8
+
+    ant_push_9 = l2_dist(obs_buf_9[:,:2], goal_9) < 1.5
+    ant_push_9 = abs(ant_push_9 - 1)
+    ant_dist_9 = l2_dist(pos_before_9, goal_before_9) - l2_dist(obs_buf_9[:,:2], goal_9)
+    ant_dist_reward_9 = ant_dist_reward_scale * ant_dist_9 * ant_push_9
+    goal_dist_before_9 = l2_dist(box_targets_9, goal_before_9)
+    goal_dist_9 = l2_dist(box_targets_9, goal_9)
+    goal_arrive_9 = goal_dist_9 < 0.5
+    goal_dist_reward_9 = goal_dist_reward_scale * (goal_dist_before_9 - goal_dist_9)
+    goal_arrive_reward_9 = 2 * goal_arrive_9
+
+    ant_push_10 = l2_dist(obs_buf_10[:,:2], goal_10) < 1.5
+    ant_push_10 = abs(ant_push_10 - 1)
+    ant_dist_10 = l2_dist(pos_before_10, goal_before_10) - l2_dist(obs_buf_10[:,:2], goal_10)
+    ant_dist_reward_10 = ant_dist_reward_scale * ant_dist_10 * ant_push_10
+    goal_dist_before_10 = l2_dist(box_targets_10, goal_before_10)
+    goal_dist_10 = l2_dist(box_targets_10, goal_10)
+    goal_arrive_10 = goal_dist_10 < 0.5
+    goal_dist_reward_10 = goal_dist_reward_scale * (goal_dist_before_10 - goal_dist_10)
+    goal_arrive_reward_10 = 2 * goal_arrive_10
+
+    ant_dist_reward = ant_dist_reward_1 + ant_dist_reward_2 + ant_dist_reward_3 + ant_dist_reward_4 + ant_dist_reward_5 + \
+                      ant_dist_reward_6 + ant_dist_reward_7 + ant_dist_reward_8 + ant_dist_reward_9 + ant_dist_reward_10 
+    
+    goal_dist_reward = goal_dist_reward_1 + goal_dist_reward_2 + goal_dist_reward_3 + goal_dist_reward_4 + goal_dist_reward_5 + \
+                       goal_dist_reward_6 + goal_dist_reward_7 + goal_dist_reward_8 + goal_dist_reward_9 + goal_dist_reward_10  
+    
+    goal_arrive_reward = goal_arrive_reward_1 + goal_arrive_reward_2 + goal_arrive_reward_3 + goal_arrive_reward_4 + goal_arrive_reward_5 + \
+                         goal_arrive_reward_6 + goal_arrive_reward_7 + goal_arrive_reward_8 + goal_arrive_reward_9 + goal_arrive_reward_10
+
 
     # success
     quat_arrive = quat_dist > 0.9
-    success_reward = quat_arrive * goal_arrive * 10
+    success_reward = quat_arrive * goal_arrive_1 * goal_arrive_2 * goal_arrive_3 * goal_arrive_4 * goal_arrive_5 * goal_arrive_6 * \
+                     goal_arrive_7 * goal_arrive_8 * goal_arrive_9 * goal_arrive_10 * 100
 
 
-    # reward from direction headed
-    heading_weight_tensor = torch.ones_like(obs_buf[:, 13]) * heading_weight
-    heading_reward = torch.where(obs_buf[:, 13] > 0.8, heading_weight_tensor, heading_weight * obs_buf[:, 13] / 0.8)
-    # print('**heading_reward:',heading_reward[:4])
+    # reward from direction headed   aligning up axis of ant and environment
+    heading_weight_tensor_1 = torch.ones_like(obs_buf_1[:, 13]) * heading_weight
+    heading_reward_1 = torch.where(obs_buf_1[:, 13] > 0.8, heading_weight_tensor_1, heading_weight * obs_buf_1[:, 13] / 0.8)
+    up_reward_1 = torch.zeros_like(heading_reward_1)
+    up_reward_1 = torch.where(obs_buf_1[:, 12] > 0.93, up_reward_1 + up_weight, up_reward_1)
 
-    # aligning up axis of ant and environment
-    up_reward = torch.zeros_like(heading_reward)
-    up_reward = torch.where(obs_buf[:, 12] > 0.93, up_reward + up_weight, up_reward)
-    # print('**up_reward:',up_reward[:4])
+    heading_weight_tensor_2 = torch.ones_like(obs_buf_2[:, 13]) * heading_weight
+    heading_reward_2 = torch.where(obs_buf_2[:, 13] > 0.8, heading_weight_tensor_2, heading_weight * obs_buf_2[:, 13] / 0.8)
+    up_reward_2 = torch.zeros_like(heading_reward_2)
+    up_reward_2 = torch.where(obs_buf_2[:, 12] > 0.93, up_reward_2 + up_weight, up_reward_2)
+
+    heading_weight_tensor_3 = torch.ones_like(obs_buf_3[:, 13]) * heading_weight
+    heading_reward_3 = torch.where(obs_buf_3[:, 13] > 0.8, heading_weight_tensor_3, heading_weight * obs_buf_3[:, 13] / 0.8)
+    up_reward_3 = torch.zeros_like(heading_reward_3)
+    up_reward_3 = torch.where(obs_buf_3[:, 12] > 0.93, up_reward_3 + up_weight, up_reward_3)
+
+    heading_weight_tensor_4 = torch.ones_like(obs_buf_4[:, 13]) * heading_weight
+    heading_reward_4 = torch.where(obs_buf_4[:, 13] > 0.8, heading_weight_tensor_4, heading_weight * obs_buf_4[:, 13] / 0.8)
+    up_reward_4 = torch.zeros_like(heading_reward_4)
+    up_reward_4 = torch.where(obs_buf_4[:, 12] > 0.93, up_reward_4 + up_weight, up_reward_4)
+
+    heading_weight_tensor_5 = torch.ones_like(obs_buf_5[:, 13]) * heading_weight
+    heading_reward_5 = torch.where(obs_buf_5[:, 13] > 0.8, heading_weight_tensor_5, heading_weight * obs_buf_5[:, 13] / 0.8)
+    up_reward_5 = torch.zeros_like(heading_reward_5)
+    up_reward_5 = torch.where(obs_buf_5[:, 12] > 0.93, up_reward_5 + up_weight, up_reward_5)
+
+    heading_weight_tensor_6 = torch.ones_like(obs_buf_6[:, 13]) * heading_weight
+    heading_reward_6 = torch.where(obs_buf_6[:, 13] > 0.8, heading_weight_tensor_6, heading_weight * obs_buf_6[:, 13] / 0.8)
+    up_reward_6 = torch.zeros_like(heading_reward_6)
+    up_reward_6 = torch.where(obs_buf_6[:, 12] > 0.93, up_reward_6 + up_weight, up_reward_6)
+
+    heading_weight_tensor_7 = torch.ones_like(obs_buf_7[:, 13]) * heading_weight
+    heading_reward_7 = torch.where(obs_buf_7[:, 13] > 0.8, heading_weight_tensor_7, heading_weight * obs_buf_7[:, 13] / 0.8)
+    up_reward_7 = torch.zeros_like(heading_reward_7)
+    up_reward_7 = torch.where(obs_buf_7[:, 12] > 0.93, up_reward_7 + up_weight, up_reward_7)
+
+    heading_weight_tensor_8 = torch.ones_like(obs_buf_8[:, 13]) * heading_weight
+    heading_reward_8 = torch.where(obs_buf_8[:, 13] > 0.8, heading_weight_tensor_8, heading_weight * obs_buf_8[:, 13] / 0.8)
+    up_reward_8 = torch.zeros_like(heading_reward_8)
+    up_reward_8 = torch.where(obs_buf_8[:, 12] > 0.93, up_reward_8 + up_weight, up_reward_8)
+
+    heading_weight_tensor_9 = torch.ones_like(obs_buf_9[:, 13]) * heading_weight
+    heading_reward_9 = torch.where(obs_buf_9[:, 13] > 0.8, heading_weight_tensor_9, heading_weight * obs_buf_9[:, 13] / 0.8)
+    up_reward_9 = torch.zeros_like(heading_reward_9)
+    up_reward_9 = torch.where(obs_buf_9[:, 12] > 0.93, up_reward_9 + up_weight, up_reward_9)
+
+    heading_weight_tensor_10 = torch.ones_like(obs_buf_10[:, 13]) * heading_weight
+    heading_reward_10 = torch.where(obs_buf_10[:, 13] > 0.8, heading_weight_tensor_10, heading_weight * obs_buf_10[:, 13] / 0.8)
+    up_reward_10 = torch.zeros_like(heading_reward_10)
+    up_reward_10 = torch.where(obs_buf_10[:, 12] > 0.93, up_reward_10 + up_weight, up_reward_10)
+
+    up_reward = up_reward_1 + up_reward_2 + up_reward_3 + up_reward_4 + up_reward_5 + up_reward_6 + \
+                up_reward_7 + up_reward_8 + up_reward_9 + up_reward_10
+    
 
     # energy penalty for movement
     actions_cost = torch.sum(actions ** 2, dim=-1)
-    electricity_cost = torch.sum(torch.abs(actions[:,0:8] * obs_buf[:, 22:30]), dim=-1)
-    dof_at_limit_cost = torch.sum(obs_buf[:, 14:22] > 0.99, dim=-1)
-    # print('*****actions:', actions[:4])
-    # print(obs_buf[:4, 20:28])
-    # print((torch.abs(actions * obs_buf[:, 20:28]))[0:4])
+    electricity_cost_1 = torch.sum(torch.abs(actions[:,0:8] * obs_buf_1[:, 22:30]), dim=-1)
+    dof_at_limit_cost_1 = torch.sum(obs_buf_1[:, 14:22] > 0.99, dim=-1)
 
-    # reward for duration of staying alive
-    # alive_reward = torch.ones_like(potentials) * 0.5
-    # print('***alive_reward:',alive_reward[:4])
-    # progress_reward = potentials - prev_potentials
-    # print('***progress_reward',progress_reward[:4])
+    electricity_cost_2 = torch.sum(torch.abs(actions[:,8:16] * obs_buf_2[:, 22:30]), dim=-1)
+    dof_at_limit_cost_2 = torch.sum(obs_buf_2[:, 14:22] > 0.99, dim=-1)
 
+    electricity_cost_3 = torch.sum(torch.abs(actions[:,16:24] * obs_buf_3[:, 22:30]), dim=-1)
+    dof_at_limit_cost_3 = torch.sum(obs_buf_3[:, 14:22] > 0.99, dim=-1)
 
-    total_reward = up_reward + quat_reward +  goal_dist_reward + goal_arrive_reward + success_reward- \
+    electricity_cost_4 = torch.sum(torch.abs(actions[:,24:32] * obs_buf_4[:, 22:30]), dim=-1)
+    dof_at_limit_cost_4 = torch.sum(obs_buf_4[:, 14:22] > 0.99, dim=-1)
+
+    electricity_cost_5 = torch.sum(torch.abs(actions[:,32:40] * obs_buf_5[:, 22:30]), dim=-1)
+    dof_at_limit_cost_5 = torch.sum(obs_buf_5[:, 14:22] > 0.99, dim=-1)
+
+    electricity_cost_6 = torch.sum(torch.abs(actions[:,40:48] * obs_buf_6[:, 22:30]), dim=-1)
+    dof_at_limit_cost_6 = torch.sum(obs_buf_6[:, 14:22] > 0.99, dim=-1)
+
+    electricity_cost_7 = torch.sum(torch.abs(actions[:,48:56] * obs_buf_7[:, 22:30]), dim=-1)
+    dof_at_limit_cost_7 = torch.sum(obs_buf_7[:, 14:22] > 0.99, dim=-1)
+
+    electricity_cost_8 = torch.sum(torch.abs(actions[:,56:64] * obs_buf_8[:, 22:30]), dim=-1)
+    dof_at_limit_cost_8 = torch.sum(obs_buf_8[:, 14:22] > 0.99, dim=-1)
+
+    electricity_cost_9 = torch.sum(torch.abs(actions[:,64:72] * obs_buf_9[:, 22:30]), dim=-1)
+    dof_at_limit_cost_9 = torch.sum(obs_buf_9[:, 14:22] > 0.99, dim=-1)
+
+    electricity_cost_10 = torch.sum(torch.abs(actions[:,72:80] * obs_buf_10[:, 22:30]), dim=-1)
+    dof_at_limit_cost_10 = torch.sum(obs_buf_10[:, 14:22] > 0.99, dim=-1)
+
+    electricity_cost = electricity_cost_1 + electricity_cost_2 + electricity_cost_3 + electricity_cost_4 + electricity_cost_5 + \
+                       electricity_cost_6 + electricity_cost_7 + electricity_cost_8 + electricity_cost_9 + electricity_cost_10
+    
+    dof_at_limit_cost = dof_at_limit_cost_1 + dof_at_limit_cost_2 + dof_at_limit_cost_3 + dof_at_limit_cost_4 + dof_at_limit_cost_5 + \
+                        dof_at_limit_cost_6 + dof_at_limit_cost_7 + dof_at_limit_cost_8 + dof_at_limit_cost_9 + dof_at_limit_cost_10 
+    
+    alive_reward = torch.ones_like(ant_dist_reward) * 5
+
+    total_reward = alive_reward + up_reward + quat_reward + ant_dist_reward + goal_dist_reward + goal_arrive_reward + success_reward- \
                    actions_cost_scale * actions_cost - energy_cost_scale * electricity_cost - dof_at_limit_cost * joints_at_limit_cost_scale
     # print('**total_reward:',total_reward.shape)
     # print('**total_reward:',total_reward[:4])
 
     # adjust reward for fallen agents
-    total_reward = torch.where(obs_buf[:, 2] < termination_height, torch.ones_like(total_reward) * death_cost,
+    fallen = (obs_buf_1[:, 2] < termination_height) + (obs_buf_2[:, 2] < termination_height)  + (obs_buf_3[:, 2] < termination_height) \
+            + (obs_buf_4[:, 2] < termination_height)  + (obs_buf_5[:, 2] < termination_height)  + (obs_buf_6[:, 2] < termination_height) \
+            + (obs_buf_7[:, 2] < termination_height)  + (obs_buf_8[:, 2] < termination_height)  + (obs_buf_9[:, 2] < termination_height)\
+            + (obs_buf_10[:, 2] < termination_height)
+    total_reward = torch.where( fallen , torch.ones_like(total_reward) * death_cost,
                                total_reward)
 
     # reset agents
-    reset = torch.where(obs_buf[:, 2] < termination_height, torch.ones_like(reset_buf), reset_buf)
+    reset = torch.where(fallen, torch.ones_like(reset_buf), reset_buf)
     reset = torch.where(progress_buf >= max_episode_length - 1, torch.ones_like(reset_buf), reset)
 
     return total_reward, reset
