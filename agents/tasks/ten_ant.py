@@ -54,7 +54,7 @@ class TenAnt(BaseTask):
 
         self.draw_penalty_scale = -1
         self.move_reward_scale = 1.
-        self.quat_reward_scale = 1.
+        self.quat_reward_scale = 0.
         self.ant_dist_reward_scale = 500.
         self.goal_dist_reward_scale = 500.
 
@@ -490,7 +490,7 @@ class TenAnt(BaseTask):
         # box
         asset_options = gymapi.AssetOptions()
         asset_options.density = 1.
-        asset_box = self.gym.create_box(self.sim, 1, 2, 1, asset_options)
+        asset_box = self.gym.create_box(self.sim, 1, 28, 1, asset_options)
         box_pose = gymapi.Transform()
         box_pose.p = gymapi.Vec3(4, 0, 1)
         
