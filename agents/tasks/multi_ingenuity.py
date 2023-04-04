@@ -150,7 +150,7 @@ class MultiIngenuity(BaseTask):
         upper = gymapi.Vec3(spacing, spacing, spacing)
 
         asset_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../../assets')
-        asset_file = "mjcf/ingenuity.xml"
+        asset_file = "mjcf/open_ai_assets/ingenuity/ingenuity.xml"
 
         asset_options = gymapi.AssetOptions()
         asset_options.fix_base_link = False
