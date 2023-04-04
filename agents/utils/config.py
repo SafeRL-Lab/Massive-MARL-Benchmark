@@ -61,7 +61,7 @@ def set_seed(seed, torch_deterministic=False):
 
 def retrieve_cfg(args, use_rlg_config=False):
 
-    if args.task in ["TenAnt", "OneAnt", "ShadowHandTwoCatchUnderarm", "ShadowHandCatchAbreast", "ShadowHandReOrientation",
+    if args.task in ["TenAnt", "OneAnt", "MultiIngenuity", "ShadowHandCatchAbreast", "ShadowHandReOrientation",
                      "ShadowHandCatchOver2Underarm", "ShadowHandBottleCap", "ShadowHandDoorCloseInward", "ShadowHandDoorCloseOutward",
                     "ShadowHandDoorOpenInward", "ShadowHandDoorOpenOutward", "ShadowHandKettle", "ShadowHandPen", "ShadowHandSwitch",
                     "ShadowHandPushBlock", "ShadowHandSwingCup", "ShadowHandGraspAndPlace", "ShadowHandScissors", "AllegroHandOver", "AllegroHandCatchUnderarm"]:
