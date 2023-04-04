@@ -7,6 +7,8 @@
 
 from agents.tasks.ten_ant import TenAnt
 from agents.tasks.one_ant import OneAnt
+from agents.tasks.multi_ingenuity import MultiIngenuity
+
 
 
 from agents.tasks.agent_base.vec_task import VecTaskCPU, VecTaskGPU, VecTaskPython, VecTaskPythonArm
