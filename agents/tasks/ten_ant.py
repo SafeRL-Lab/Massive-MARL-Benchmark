@@ -1237,8 +1237,8 @@ def compute_ant_reward(
     up_reward_10 = torch.zeros_like(heading_reward_10)
     up_reward_10 = torch.where(obs_buf_10[:, 12] > 0.93, up_reward_10 + up_weight, up_reward_10)
 
-    up_reward = up_reward_1 + up_reward_2 + up_reward_3 + up_reward_4 + up_reward_5 + up_reward_6 + \
-                up_reward_7 + up_reward_8 + up_reward_9 + up_reward_10
+    up_reward = (up_reward_1 + up_reward_2 + up_reward_3 + up_reward_4 + up_reward_5 + up_reward_6 + \
+                up_reward_7 + up_reward_8 + up_reward_9 + up_reward_10) * 10
     
 
     # energy penalty for movement
