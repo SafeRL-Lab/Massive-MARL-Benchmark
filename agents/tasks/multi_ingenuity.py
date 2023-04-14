@@ -75,53 +75,59 @@ class MultiIngenuity(BaseTask):
         dofs_per_env = 4
         bodies_per_env = 6
 
-        self.root_tensor = self.gym.acquire_actor_root_state_tensor(self.sim)
+        self.actor_root_state = self.gym.acquire_actor_root_state_tensor(self.sim)
         self.dof_state_tensor = self.gym.acquire_dof_state_tensor(self.sim)
-
-        vec_root_tensor = gymtorch.wrap_tensor(self.root_tensor).view(self.num_envs, 2, 13)
-        vec_dof_tensor = gymtorch.wrap_tensor(self.dof_state_tensor).view(self.num_envs, dofs_per_env, 2)
-
-        self.root_states = vec_root_tensor[:, 0, :]
-        self.root_positions = self.root_states[:, 0:3]
-        self.target_root_positions = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
-        self.target_root_positions[:, 2] = 1
-        self.root_quats = self.root_states[:, 3:7]
-        self.root_linvels = self.root_states[:, 7:10]
-        self.root_angvels = self.root_states[:, 10:13]
-
-        self.marker_states = vec_root_tensor[:, 1, :]
-        self.marker_positions = self.marker_states[:, 0:3]
-
-        self.dof_states = vec_dof_tensor
-        self.dof_positions = vec_dof_tensor[..., 0]
-        self.dof_velocities = vec_dof_tensor[..., 1]
 
         self.gym.refresh_actor_root_state_tensor(self.sim)
         self.gym.refresh_dof_state_tensor(self.sim)
 
+        self.root_states = gymtorch.wrap_tensor(self.actor_root_state)
         self.initial_root_states = self.root_states.clone()
-        self.initial_dof_states = self.dof_states.clone()
+        self.dof_state = gymtorch.wrap_tensor(self.dof_state_tensor)
+        self.dof_pos_1 = self.dof_state.view(self.num_envs, -1, 2)[:, :dofs_per_env, 0]
+        self.dof_pos_2 = self.dof_state.view(self.num_envs, -1, 2)[:, dofs_per_env: 2 * dofs_per_env, 0]
+
+        self.dof_vel_1 = self.dof_state.view(self.num_envs, -1, 2)[:, :dofs_per_env, 1]
+        self.dof_vel_2 = self.dof_state.view(self.num_envs, -1, 2)[:, dofs_per_env: 2 * dofs_per_env, 1]
+        self.initial_dof_states = self.dof_state.clone()
+        
+
+        self.root_positions_1 = self.root_states[0::4, 0:3].clone()
+        self.root_positions_2 = self.root_states[2::4, 0:3].clone()
+        self.target_root_positions_1 = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
+        self.target_root_positions_1[:, 2] = 1
+        self.target_root_positions_2 = torch.zeros((self.num_envs, 3), device=self.device, dtype=torch.float32)
+        self.target_root_positions_2[:, 2] = 1
+        self.root_quats_1 = self.root_states[0::4, 3:7].clone()
+        self.root_linvels_1 = self.root_states[0::4, 7:10].clone()
+        self.root_angvels_1 = self.root_states[0::4, 10:13].clone()
+        self.root_quats_2 = self.root_states[2::4, 3:7].clone()
+        self.root_linvels_2 = self.root_states[2::4, 7:10].clone()
+        self.root_angvels_2 = self.root_states[2::4, 10:13].clone()
+
+
+        #self.marker_states == targets
+
+        self.marker_states_1 = self.root_states[1::4, :].clone()
+        self.marker_positions_1 = self.marker_states_1[:, 0:3]
+        self.marker_states_2 = self.root_states[3::4, :].clone()
+        self.marker_positions_2 = self.marker_states_2[:, 0:3]
+        
 
         self.thrust_lower_limit = 0
         self.thrust_upper_limit = 2000
         self.thrust_lateral_component = 0.2
 
         # control tensors
-        self.thrusts = torch.zeros((self.num_envs, 2, 3), dtype=torch.float32, device=self.device, requires_grad=False)
-        self.forces = torch.zeros((self.num_envs, bodies_per_env, 3), dtype=torch.float32, device=self.device, requires_grad=False)
+        self.thrusts = torch.zeros((self.num_envs, 2*2, 3), dtype=torch.float32, device=self.device, requires_grad=False)
+        self.forces = torch.zeros((self.num_envs, bodies_per_env*2, 3), dtype=torch.float32, device=self.device, requires_grad=False)
 
-        self.all_actor_indices = torch.arange(self.num_envs * 2, dtype=torch.int32, device=self.device).reshape((self.num_envs, 2))
+        self.all_actor_indices = torch.arange(self.num_envs * 4, dtype=torch.int32, device=self.device).reshape((self.num_envs, 4))
+        self.actor_indices = torch.arange(self.num_envs * 2, dtype=torch.int32, device=self.device).reshape((self.num_envs, 2))
 
-        if self.viewer:
-            cam_pos = gymapi.Vec3(2.25, 2.25, 3.0)
-            cam_target = gymapi.Vec3(3.5, 4.0, 1.9)
-            self.gym.viewer_camera_look_at(self.viewer, None, cam_pos, cam_target)
+        print('***self.all_actor_indices:',self.all_actor_indices.shape)
+        print('***self.all_actor_indices:',self.all_actor_indices[:4,:])
 
-            # need rigid body states for visualizing thrusts
-            self.rb_state_tensor = self.gym.acquire_rigid_body_state_tensor(self.sim)
-            self.rb_states = gymtorch.wrap_tensor(self.rb_state_tensor).view(self.num_envs, bodies_per_env, 13)
-            self.rb_positions = self.rb_states[..., 0:3]
-            self.rb_quats = self.rb_states[..., 3:7]
 
 
 
@@ -157,84 +163,124 @@ class MultiIngenuity(BaseTask):
         asset_options.angular_damping = 0.0
         asset_options.max_angular_velocity = 4 * math.pi
         asset_options.slices_per_cylinder = 40
-        asset = self.gym.load_asset(self.sim, asset_root, asset_file, asset_options)
+
+        asset_1 = self.gym.load_asset(self.sim, asset_root, asset_file, asset_options)
+        asset_2 = self.gym.load_asset(self.sim, asset_root, asset_file, asset_options)
 
         asset_options.fix_base_link = True
-        marker_asset = self.gym.create_sphere(self.sim, 0.1, asset_options)
+        marker_asset_1 = self.gym.create_sphere(self.sim, 0.1, asset_options)
+        marker_asset_2 = self.gym.create_sphere(self.sim, 0.1, asset_options)
 
-        default_pose = gymapi.Transform()
-        default_pose.p.z = 1.0
+        default_pose_1 = gymapi.Transform()
+        default_pose_1.p = gymapi.Vec3(0, 0, 1)
+        default_pose_2 = gymapi.Transform()
+        default_pose_2.p = gymapi.Vec3(-2, -2, 1)
 
         self.envs = []
-        self.actor_handles = []
+        self.actor_handles_1 = []
+        self.actor_handles_2 = []
         for i in range(self.num_envs):
             # create env instance
             env = self.gym.create_env(self.sim, lower, upper, num_per_row)
-            actor_handle = self.gym.create_actor(env, asset, default_pose, "ingenuity", i, 1, 1)
+            actor_handle_1 = self.gym.create_actor(env, asset_1, default_pose_1, "ingenuity_1", i, 1, 1)
+            actor_handle_2 = self.gym.create_actor(env, asset_2, default_pose_2, "ingenuity_2", i, 1, 1)
 
-            dof_props = self.gym.get_actor_dof_properties(env, actor_handle)
-            dof_props['stiffness'].fill(0)
-            dof_props['damping'].fill(0)
-            self.gym.set_actor_dof_properties(env, actor_handle, dof_props)
+            dof_props_1 = self.gym.get_actor_dof_properties(env, actor_handle_1)
+            dof_props_1['stiffness'].fill(0)
+            dof_props_1['damping'].fill(0)
+            self.gym.set_actor_dof_properties(env, actor_handle_1, dof_props_1)
 
-            marker_handle = self.gym.create_actor(env, marker_asset, default_pose, "marker", i, 1, 1)
-            self.gym.set_rigid_body_color(env, marker_handle, 0, gymapi.MESH_VISUAL_AND_COLLISION, gymapi.Vec3(1, 0, 0))
+            dof_props_2 = self.gym.get_actor_dof_properties(env, actor_handle_2)
+            dof_props_2['stiffness'].fill(0)
+            dof_props_2['damping'].fill(0)
+            self.gym.set_actor_dof_properties(env, actor_handle_2, dof_props_2)
 
-            self.actor_handles.append(actor_handle)
+            marker_handle_1 = self.gym.create_actor(env, marker_asset_1, default_pose_1, "marker_1", i, 1, 1)
+            self.gym.set_rigid_body_color(env, marker_handle_1, 0, gymapi.MESH_VISUAL_AND_COLLISION, gymapi.Vec3(1, 0, 0))
+            marker_handle_2 = self.gym.create_actor(env, marker_asset_2, default_pose_2, "marker_2", i, 1, 1)
+            self.gym.set_rigid_body_color(env, marker_handle_2, 0, gymapi.MESH_VISUAL_AND_COLLISION, gymapi.Vec3(0.97, 0.38, 0.06))
+
+            self.actor_handles_1.append(actor_handle_1)
+            self.actor_handles_2.append(actor_handle_2)
             self.envs.append(env)
+
 
     def set_targets(self, env_ids):
         num_sets = len(env_ids)
         # set target position randomly with x, y in (-5, 5) and z in (1, 2)
-        self.target_root_positions[env_ids, 0:2] = - 5
-        self.target_root_positions[env_ids, 2] = 1
-        self.marker_positions[env_ids] = self.target_root_positions[env_ids]
+        self.target_root_positions_1[env_ids, 0:2] = - 5
+        self.target_root_positions_1[env_ids, 2] = 1
+        self.target_root_positions_2[env_ids, 0:2] = - 5
+        self.target_root_positions_2[env_ids, 2] = 1
+        self.marker_positions_1[env_ids] = self.target_root_positions_1[env_ids]
+        self.marker_positions_2[env_ids] = self.target_root_positions_2[env_ids]
+        # print('***self.root_states:',self.root_states[:4,:])
+        # print('***self.marker_states:',self.marker_states[:4,:])
         # copter "position" is at the bottom of the legs, so shift the target up so it visually aligns better
-        self.marker_positions[env_ids, 2] += 0.4
-        actor_indices = self.all_actor_indices[env_ids, 1].flatten()
+        self.marker_positions_1[env_ids, 2] += 0.4
+        self.marker_positions_2[env_ids, 2] += 0.4
+        actor_indices_1 = self.all_actor_indices[env_ids, 1].flatten()
+        actor_indices_2 = self.all_actor_indices[env_ids, 3].flatten()
 
-        return actor_indices
+        return actor_indices_1,actor_indices_2
 
     def reset_idx(self, env_ids):
 
         # set rotor speeds
-        self.dof_velocities[:, 1] = -50
-        self.dof_velocities[:, 3] = 50
+        self.dof_vel_1[:, 1] = -50
+        self.dof_vel_1[:, 3] = 50
+        self.dof_vel_2[:, 1] = -50
+        self.dof_vel_2[:, 3] = 50
 
         num_resets = len(env_ids)
 
-        target_actor_indices = self.set_targets(env_ids)
+        target_actor_indices_1, target_actor_indices_2 = self.set_targets(env_ids)
+        actor_indices_1 = self.all_actor_indices[env_ids, 0].flatten()
+        actor_indices_2 = self.all_actor_indices[env_ids, 1].flatten()
+        actor_indices  = (torch.cat([actor_indices_1, actor_indices_2]).to(torch.int32))
+        # print('****actor_indices_1',actor_indices_1)
+        # print('****actor_indices_2',actor_indices_2)
+        # print('****actor_indices',torch.cat([actor_indices_1, actor_indices_2]))
 
-        actor_indices = self.all_actor_indices[env_ids, 0].flatten()
+        # indices_1 = self.actor_indices[env_ids, 0].flatten()
+        # indices_2 = self.actor_indices[env_ids, 1].flatten()
+        # indices = torch.unique(torch.cat([indices_1[env_ids], indices_2[env_ids],]).to(torch.int32))
 
-        self.root_states[env_ids] = self.initial_root_states[env_ids]
-        self.root_states[env_ids, 0] += torch_rand_float(-1.5, 1.5, (num_resets, 1), self.device).flatten()
-        self.root_states[env_ids, 1] += torch_rand_float(-1.5, 1.5, (num_resets, 1), self.device).flatten()
-        self.root_states[env_ids, 2] += torch_rand_float(-0.2, 1.5, (num_resets, 1), self.device).flatten()
 
-        self.gym.set_dof_state_tensor_indexed(self.sim, self.dof_state_tensor, gymtorch.unwrap_tensor(actor_indices), num_resets)
+        self.root_states[env_ids*4] = self.initial_root_states[env_ids*4]
+        self.root_states[env_ids*4 + 2] = self.initial_root_states[env_ids*4 + 2]
+        self.root_states[env_ids*4, 0] += torch_rand_float(-1.5, 1.5, (num_resets, 1), self.device).flatten()
+        self.root_states[env_ids*4, 1] += torch_rand_float(-1.5, 1.5, (num_resets, 1), self.device).flatten()
+        self.root_states[env_ids*4, 2] += torch_rand_float(-0.2, 1.5, (num_resets, 1), self.device).flatten()
+        self.root_states[env_ids*4+2, 0] += torch_rand_float(-1.5, 1.5, (num_resets, 1), self.device).flatten()
+        self.root_states[env_ids*4+2, 1] += torch_rand_float(-1.5, 1.5, (num_resets, 1), self.device).flatten()
+        self.root_states[env_ids*4+2, 2] += torch_rand_float(-0.2, 1.5, (num_resets, 1), self.device).flatten()
+
+        self.gym.set_dof_state_tensor_indexed(self.sim, self.dof_state_tensor, gymtorch.unwrap_tensor(actor_indices), len(actor_indices))
 
         self.reset_buf[env_ids] = 0
         self.progress_buf[env_ids] = 0
 
-        return torch.unique(torch.cat([target_actor_indices, actor_indices]))
+        return torch.unique(torch.cat([target_actor_indices_1, actor_indices_1])),torch.unique(torch.cat([target_actor_indices_2, actor_indices_2]))
     
     def pre_physics_step(self, _actions):
 
         # resets
         set_target_ids = (self.progress_buf % 500 == 0).nonzero(as_tuple=False).squeeze(-1)
-        target_actor_indices = torch.tensor([], device=self.device, dtype=torch.int32)
+        target_actor_indices_1 = torch.tensor([], device=self.device, dtype=torch.int32)
+        target_actor_indices_2 = torch.tensor([], device=self.device, dtype=torch.int32)
         if len(set_target_ids) > 0:
-            target_actor_indices = self.set_targets(set_target_ids)
+            target_actor_indices_1, target_actor_indices_2 = self.set_targets(set_target_ids)
 
         reset_env_ids = self.reset_buf.nonzero(as_tuple=False).squeeze(-1)
-        actor_indices = torch.tensor([], device=self.device, dtype=torch.int32)
+        actor_indices_1 = torch.tensor([], device=self.device, dtype=torch.int32)
+        actor_indices_2 = torch.tensor([], device=self.device, dtype=torch.int32)
         if len(reset_env_ids) > 0:
-            actor_indices = self.reset_idx(reset_env_ids)
+            actor_indices_1, actor_indices_2 = self.reset_idx(reset_env_ids)
 
-        reset_indices = torch.unique(torch.cat([target_actor_indices, actor_indices]))
+        reset_indices = torch.unique(torch.cat([target_actor_indices_1, actor_indices_1, target_actor_indices_2, actor_indices_2]))
         if len(reset_indices) > 0:
-            self.gym.set_actor_root_state_tensor_indexed(self.sim, self.root_tensor, gymtorch.unwrap_tensor(reset_indices), len(reset_indices))
+            self.gym.set_actor_root_state_tensor_indexed(self.sim, self.actor_root_state, gymtorch.unwrap_tensor(reset_indices), len(reset_indices))
 
         actions = _actions.to(self.device)
 
@@ -269,37 +315,21 @@ class MultiIngenuity(BaseTask):
         self.compute_observations()
         self.compute_reward()
 
-        # debug viz
-        if self.viewer and self.debug_viz:
-            # compute start and end positions for visualizing thrust lines
-            self.gym.refresh_rigid_body_state_tensor(self.sim)
-            rotor_indices = torch.LongTensor([2, 4, 6, 8])
-            quats = self.rb_quats[:, rotor_indices]
-            dirs = -quat_axis(quats.view(self.num_envs * 4, 4), 2).view(self.num_envs, 4, 3)
-            starts = self.rb_positions[:, rotor_indices] + self.rotor_env_offsets
-            ends = starts + 0.1 * self.thrusts.view(self.num_envs, 4, 1) * dirs
-
-            # submit debug line geometry
-            verts = torch.stack([starts, ends], dim=2).cpu().numpy()
-            colors = np.zeros((self.num_envs * 4, 3), dtype=np.float32)
-            colors[..., 0] = 1.0
-            self.gym.clear_lines(self.viewer)
-            self.gym.add_lines(self.viewer, None, self.num_envs * 4, verts, colors)
 
     def compute_observations(self):
-        self.obs_buf[..., 0:3] = (self.target_root_positions - self.root_positions) / 3
-        self.obs_buf[..., 3:7] = self.root_quats
-        self.obs_buf[..., 7:10] = self.root_linvels / 2
-        self.obs_buf[..., 10:13] = self.root_angvels / math.pi
+        self.obs_buf[..., 0:3] = (self.target_root_positions_1 - self.root_positions_1) / 3
+        self.obs_buf[..., 3:7] = self.root_quats_1
+        self.obs_buf[..., 7:10] = self.root_linvels_1 / 2
+        self.obs_buf[..., 10:13] = self.root_angvels_1 / math.pi
         return self.obs_buf
 
     def compute_reward(self):
         self.rew_buf[:], self.reset_buf[:] = compute_ingenuity_reward(
-            self.root_positions,
-            self.target_root_positions,
-            self.root_quats,
-            self.root_linvels,
-            self.root_angvels,
+            self.root_positions_1,
+            self.target_root_positions_1,
+            self.root_quats_1,
+            self.root_linvels_1,
+            self.root_angvels_1,
             self.reset_buf, self.progress_buf, self.max_episode_length
         )
 
