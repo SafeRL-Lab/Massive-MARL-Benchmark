@@ -13,5 +13,7 @@ Isaac Gym provides a high-performance learning platform that enables training of
 
 
 
-python train.py --task=OneAnt --algo=ppo
-python train.py --task=TenAnt --algo=mappo
+--task=MultiAntCircle
+--task=MultiIngenuity
+--task=OneAnt
+--task=TenAnt
