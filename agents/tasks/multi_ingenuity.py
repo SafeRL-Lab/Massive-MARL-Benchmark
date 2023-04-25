@@ -95,6 +95,17 @@ class MultiIngenuity(BaseTask):
         self.dof_vel_4 = self.dof_state.view(self.num_envs, -1, 2)[:, 3 * dofs_per_env: 4 * dofs_per_env, 1]
         self.initial_dof_states = self.dof_state.clone()
 
+        self.obs_buf_1 = torch.zeros((self.num_envs, 13), device=self.device, dtype=torch.float)
+        self.obs_buf_2 = torch.zeros((self.num_envs, 13), device=self.device, dtype=torch.float)
+        self.obs_buf_3 = torch.zeros((self.num_envs, 13), device=self.device, dtype=torch.float)
+        self.obs_buf_4 = torch.zeros((self.num_envs, 13), device=self.device, dtype=torch.float)
+
+        self.goal_1 = to_torch([4, 2, 1], device=self.device).repeat((self.num_envs, 1))
+        self.goal_2 = to_torch([4, -2, 1], device=self.device).repeat((self.num_envs, 1))
+        self.goal_3 = to_torch([4, 6, 1], device=self.device).repeat((self.num_envs, 1))
+        self.goal_4 = to_torch([4, -6, 1], device=self.device).repeat((self.num_envs, 1))
+
+
         self.thrust_lower_limit = 0
         self.thrust_upper_limit = 2000
         self.thrust_lateral_component = 0.2
@@ -148,9 +159,9 @@ class MultiIngenuity(BaseTask):
         default_pose_2 = gymapi.Transform()
         default_pose_2.p = gymapi.Vec3(0, -2, 1)
         default_pose_3 = gymapi.Transform()
-        default_pose_3.p = gymapi.Vec3(0, -4, 1)
+        default_pose_3.p = gymapi.Vec3(0, 6, 1)
         default_pose_4 = gymapi.Transform()
-        default_pose_4.p = gymapi.Vec3(0, 4, 1)
+        default_pose_4.p = gymapi.Vec3(0, -6, 1)
 
         self.envs = []
         self.actor_handles_1 = []
@@ -161,6 +172,11 @@ class MultiIngenuity(BaseTask):
         self.actor_indices_2 = []
         self.actor_indices_3 = []
         self.actor_indices_4 = []
+
+        self.pos_before_1 = torch.zeros(3, device=self.device)
+        self.pos_before_2 = torch.zeros(3, device=self.device)
+        self.pos_before_3 = torch.zeros(3, device=self.device)
+        self.pos_before_4 = torch.zeros(3, device=self.device)
 
         for i in range(self.num_envs):
             # create env instance
@@ -241,6 +257,11 @@ class MultiIngenuity(BaseTask):
                                               gymtorch.unwrap_tensor(self.dof_state),
                                               gymtorch.unwrap_tensor(actor_indices), len(actor_indices))
 
+        self.pos_before_1 = self.root_states[0::4, :3].clone()
+        self.pos_before_2 = self.root_states[1::4, :3].clone()
+        self.pos_before_3 = self.root_states[2::4, :3].clone()
+        self.pos_before_4 = self.root_states[3::4, :3].clone()
+
         self.reset_buf[env_ids] = 0
         self.progress_buf[env_ids] = 0
 
@@ -320,24 +341,35 @@ class MultiIngenuity(BaseTask):
     def post_physics_step(self):
 
         self.progress_buf += 1
-
-        self.gym.refresh_actor_root_state_tensor(self.sim)
-        self.gym.refresh_dof_state_tensor(self.sim)
+        env_ids = self.reset_buf.nonzero(as_tuple=False).flatten()
+        if len(env_ids) > 0:
+            self.reset_idx(env_ids)
 
         self.compute_observations()
         self.compute_reward()
 
     def compute_observations(self):
-        self.obs_buf[:] = self.root_states
+        self.obs_buf_1[:] = self.root_states[0::4, :]
+        self.obs_buf_2[:] = self.root_states[1::4, :]
+        self.obs_buf_3[:] = self.root_states[2::4, :]
+        self.obs_buf_4[:] = self.root_states[3::4, :]
+        self.obs_buf = torch.cat((self.obs_buf_1, self.obs_buf_2, self.obs_buf_3, self.obs_buf_4), dim=-1)
         return self.obs_buf
 
     def compute_reward(self):
         self.rew_buf[:], self.reset_buf[:] = compute_ingenuity_reward(
-            self.root_states[0::4, 0:3],
-            self.root_states[0::4, 0:3],
-            self.root_states[0::4, 3:7],
-            self.root_states[0::4, 7:10],
-            self.root_states[0::4, 10:13],
+            self.obs_buf_1,
+            self.obs_buf_2,
+            self.obs_buf_3,
+            self.obs_buf_4,
+            self.pos_before_1,
+            self.pos_before_2,
+            self.pos_before_3,
+            self.pos_before_4,
+            self.goal_1,
+            self.goal_2,
+            self.goal_3,
+            self.goal_4,
             self.reset_buf, self.progress_buf, self.max_episode_length
         )
 
@@ -347,22 +379,62 @@ class MultiIngenuity(BaseTask):
 #####################################################################
 
 @torch.jit.script
-def compute_ingenuity_reward(root_positions, target_root_positions, root_quats, root_linvels, root_angvels, reset_buf,
+def compute_ingenuity_reward(obs_buf_1,obs_buf_2,obs_buf_3,obs_buf_4,pos_before_1,pos_before_2,pos_before_3,pos_before_4,
+                             goal_1,goal_2,goal_3,goal_4,reset_buf,
                              progress_buf, max_episode_length):
-    # type: (Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, float) -> Tuple[Tensor, Tensor]
+    # type: (Tensor, Tensor, Tensor, Tensor, Tensor,Tensor, Tensor, Tensor, Tensor, Tensor, Tensor, Tensor,Tensor, Tensor, float) -> Tuple[Tensor, Tensor]
 
     # distance to target
-    target_dist = torch.sqrt(torch.square(target_root_positions - root_positions).sum(-1))
-    pos_reward = 1.0 / (1.0 + target_dist * target_dist)
+    root_positions_1 = obs_buf_1[:, :3]
+    root_positions_2 = obs_buf_2[:, :3]
+    root_positions_3 = obs_buf_3[:, :3]
+    root_positions_4 = obs_buf_4[:, :3]
+
+    target_dist_1 = torch.sqrt(torch.square(goal_1 - root_positions_1).sum(-1))
+    target_dist_2 = torch.sqrt(torch.square(goal_2 - root_positions_2).sum(-1))
+    target_dist_3 = torch.sqrt(torch.square(goal_3 - root_positions_3).sum(-1))
+    target_dist_4 = torch.sqrt(torch.square(goal_4 - root_positions_4).sum(-1))
+
+    pos_reward_1 = 1.0 / (1.0 + target_dist_1 * target_dist_1)
+    pos_reward_2 = 1.0 / (1.0 + target_dist_2 * target_dist_2)
+    pos_reward_3 = 1.0 / (1.0 + target_dist_3 * target_dist_3)
+    pos_reward_4 = 1.0 / (1.0 + target_dist_4 * target_dist_4)
+
+    pos_reward = pos_reward_1 + pos_reward_2 + pos_reward_3 + pos_reward_4
 
     # uprightness
-    ups = quat_axis(root_quats, 2)
-    tiltage = torch.abs(1 - ups[..., 2])
-    up_reward = 5.0 / (1.0 + tiltage * tiltage)
+    ups_1 = quat_axis(obs_buf_1[:,3:7], 2)
+    tiltage_1 = torch.abs(1 - ups_1[..., 2])
+    up_reward_1 = 5.0 / (1.0 + tiltage_1 * tiltage_1)
+
+    ups_2 = quat_axis(obs_buf_2[:, 3:7], 2)
+    tiltage_2 = torch.abs(1 - ups_2[..., 2])
+    up_reward_2 = 5.0 / (1.0 + tiltage_2 * tiltage_2)
+
+    ups_3 = quat_axis(obs_buf_3[:, 3:7], 2)
+    tiltage_3 = torch.abs(1 - ups_3[..., 2])
+    up_reward_3 = 5.0 / (1.0 + tiltage_3 * tiltage_3)
+
+    ups_4 = quat_axis(obs_buf_4[:, 3:7], 2)
+    tiltage_4 = torch.abs(1 - ups_4[..., 2])
+    up_reward_4 = 5.0 / (1.0 + tiltage_4 * tiltage_4)
+
+    up_reward = up_reward_1 + up_reward_2 + up_reward_3 + up_reward_4
 
     # spinning
-    spinnage = torch.abs(root_angvels[..., 2])
-    spinnage_reward = 1.0 / (1.0 + spinnage * spinnage)
+    spinnage_1 = torch.abs(obs_buf_1[:, 12])
+    spinnage_reward_1 = 1.0 / (1.0 + spinnage_1 * spinnage_1)
+
+    spinnage_2 = torch.abs(obs_buf_2[:, 12])
+    spinnage_reward_2 = 1.0 / (1.0 + spinnage_2 * spinnage_2)
+
+    spinnage_3 = torch.abs(obs_buf_3[:, 12])
+    spinnage_reward_3 = 1.0 / (1.0 + spinnage_3 * spinnage_3)
+
+    spinnage_4 = torch.abs(obs_buf_4[:, 12])
+    spinnage_reward_4 = 1.0 / (1.0 + spinnage_4 * spinnage_4)
+
+    spinnage_reward = spinnage_reward_1 + spinnage_reward_2 + spinnage_reward_3 + spinnage_reward_4
 
     # combined reward
     # uprigness and spinning only matter when close to the target
@@ -371,8 +443,8 @@ def compute_ingenuity_reward(root_positions, target_root_positions, root_quats, 
     # resets due to misbehavior
     ones = torch.ones_like(reset_buf)
     die = torch.zeros_like(reset_buf)
-    die = torch.where(target_dist > 8.0, ones, die)
-    die = torch.where(root_positions[..., 2] < 0.5, ones, die)
+    die = torch.where(target_dist_1 > 8.0, ones, die) or torch.where(target_dist_2 > 8.0, ones, die) or torch.where(target_dist_3 > 8.0, ones, die) or torch.where(target_dist_4 > 8.0, ones, die)
+    die = torch.where(root_positions_1[:, 2] < 0.5, ones, die) or torch.where(root_positions_2[:, 2] < 0.5, ones, die) or torch.where(root_positions_3[:, 2] < 0.5, ones, die) or torch.where(root_positions_4[:, 2] < 0.5, ones, die)
 
     # resets due to episode length
     reset = torch.where(progress_buf >= max_episode_length - 1, ones, die)
