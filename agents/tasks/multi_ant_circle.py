@@ -19,7 +19,7 @@ from isaacgym import gymtorch
 from isaacgym import gymapi
 
 
-class TenAnt(BaseTask):
+class MultiAntCircle(BaseTask):
 
     def __init__(self, cfg, sim_params, physics_engine, device_type, device_id, headless=True, is_multi_agent=False):
 
