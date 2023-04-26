@@ -397,6 +397,22 @@ class MultiAntCircle(BaseTask):
 #####################################################################
 
 @torch.jit.script
+def compute_angle(
+        pos
+):
+    # type: (Tensor) -> [Tensor]
+    a = pos[:,0]
+    b = pos[:,1]
+    c = b < 0
+    d = b >= 0
+    e = c*360
+    f = -c
+    g = f + d
+    angle = e + g*np.abs(np.arctan2(b,a)*180/np.pi)
+
+    return angle
+
+@torch.jit.script
 def compute_ant_reward(
         obs_buf_1,
         obs_buf_2,
@@ -413,13 +429,44 @@ def compute_ant_reward(
         max_episode_length,
         pos_before_1,
         pos_before_2,
-        dt,
-        move_reward_scale,
-        quat_reward_scale,
-        ant_dist_reward_scale
+        dt
 ):
-    # type: (Tensor, Tensor,Tensor, Tensor, Tensor, float, float, float, float, float, float, float, float, Tensor, Tensor, float, float, float, float) -> Tuple[Tensor, Tensor]
+    # type: (Tensor, Tensor,Tensor, Tensor, Tensor, float, float, float, float, float, float, float, float, Tensor, Tensor, float) -> Tuple[Tensor, Tensor]
 
+    #circle
+    pos_1 = obs_buf_1[:,:2]
+    dist_1 = np.linalg.norm(pos_1)
+    angle_1 = compute_angle(pos_1)
+    angle_1_before = compute_angle(pos_before_1)
+    clockwise_1 = (angle_1 - angle_1_before) > 0
+    is_oncircle_1 = (dist_1>=2.7).mul(dist_1<=3.3)
+    rew_1 = (clockwise_1.mul(is_oncircle_1))*2 + ((clockwise_1.mul(is_oncircle_1)) - 1)
+
+    pos_2 = -obs_buf_2[:, :2]
+    dist_2 = np.linalg.norm(pos_2)
+    angle_2 = compute_angle(pos_2)
+    angle_2_before = compute_angle(pos_before_2)
+    clockwise_2 = (angle_2 - angle_2_before) > 0
+    is_oncircle_2 = (dist_2 >= 2.7).mul(dist_2 <= 3.3)
+    rew_2 = (clockwise_2.mul(is_oncircle_2)) * 2 + ((clockwise_2.mul(is_oncircle_2)) - 1)
+
+    rew = rew_1 + rew_2
+
+    # #another_circle
+    # vel_1 = (pos_1 - pos_before_1)/dt
+    # dist_1 = np.linalg.norm(pos_1)
+    # vel_orthogonal_1 = np.array([-vel_1[:,1],vel_1[:,0]])
+    # rew_1 = 0.1 * np.dot(pos_1, vel_orthogonal_1) / (1 + np.abs(dist_1 - 3))
+    #
+    # vel_2 = (pos_2 - pos_before_2) / dt
+    # dist_2 = np.linalg.norm(pos_2)
+    # vel_orthogonal_2 = np.array([-vel_2[:, 1], vel_2[:, 0]])
+    # rew_2 = 0.1 * np.dot(pos_2, vel_orthogonal_2) / (1 + np.abs(dist_2 - 3))
+    #
+    # rew = rew_1 + rew_2
+
+
+    # up
     heading_weight_tensor_1 = torch.ones_like(obs_buf_1[:, 13]) * heading_weight
     heading_reward_1 = torch.where(obs_buf_1[:, 13] > 0.8, heading_weight_tensor_1,
                                    heading_weight * obs_buf_1[:, 13] / 0.8)
@@ -444,9 +491,7 @@ def compute_ant_reward(
     electricity_cost = electricity_cost_1 + electricity_cost_2
     dof_at_limit_cost = dof_at_limit_cost_1 + dof_at_limit_cost_2
 
-    alive_reward = torch.ones_like(ant_dist_reward) * 50
-
-    total_reward = alive_reward + up_reward + quat_reward + ant_dist_reward + goal_dist_reward + goal_arrive_reward + success_reward - \
+    total_reward = up_reward + rew - \
                    actions_cost_scale * actions_cost - energy_cost_scale * electricity_cost - dof_at_limit_cost * joints_at_limit_cost_scale
     # print('**total_reward:',total_reward.shape)
     # print('**total_reward:',total_reward[:4])
