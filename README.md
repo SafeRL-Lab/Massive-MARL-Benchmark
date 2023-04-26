@@ -18,6 +18,8 @@ Isaac Gym provides a high-performance learning platform that enables training of
 
 This repository contains complex multi-agent control tasks. Multiple ants and ingenuities are embedded in NVIDIA Isaac Gym, providing high performance guarantee for training RL algorithms. Our environment focuses on applying model-free RL/MARL algorithms to control multi-agent operations, which are considered a challenging task for traditional control methods.
 
+## Characteristic
+
 
 ## Training
 ### Training Examples
@@ -26,3 +28,12 @@ This repository contains complex multi-agent control tasks. Multiple ants and in
 --task=MultiIngenuity
 --task=OneAnt
 --task=TenAnt
+
+## Testing
+### Testing Examples
+#### RL/MARL Examples
+--task=MultiAntCircle --model_dir=...
+--task=MultiIngenuity
+--task=OneAnt
+--task=TenAnt
+
