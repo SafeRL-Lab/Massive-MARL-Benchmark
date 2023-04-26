@@ -16,10 +16,7 @@ pip install -e .
 ## Introduction
 Isaac Gym provides a high-performance learning platform that enables training of various agents directly on the GPU. Compared with traditional RL training using CPU simulators and GPU neural networks, Isaac Gym greatly reduces the training time of complex tasks on a single GPU, increasing its training speed by 1-2 orders of magnitude.
 
-
-
-
-
+This repository contains complex multi-agent control tasks. Multiple ants and ingenuities are embedded in NVIDIA Isaac Gym, providing high performance guarantee for training RL algorithms. Our environment focuses on applying model-free RL/MARL algorithms to control multi-agent operations, which are considered a challenging task for traditional control methods.
 
 
 
