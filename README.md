@@ -22,7 +22,7 @@ This repository contains complex multi-agent control tasks. Multiple ants and in
 
 Ants and ingenuities provide a set of multi-agent manipulation tasks and RL algorithms. Better coordination and manipulation of multi-agents is a challenge for researchers. The multi-agent tasks developments have the following characteristics:
 
-* *Isaac Efficiency*
+* **Isaac Efficiency**
 
 
 ## Training
