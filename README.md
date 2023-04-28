@@ -27,20 +27,24 @@ Ants and ingenuities provide a set of multi-agent manipulation tasks and RL algo
 * **Task Diversity:** We introduce various manipulation tasks for multi-agents (e.g., circles, pushing, paralleling...); the diversity of tasks allows for better testing of RL algorithms.
 * **Quick Demos:**
 
+## Tasks
+Source code for tasks can be found in `envs/tasks`. So far, we have released the following tasks including multiple ants in circling, pushing, and ingenuities in parallel.
 
 ## Training
 ### Training Examples
 #### RL/MARL Examples
---task=MultiAntCircle
---task=MultiIngenuity
---task=OneAnt
---task=TenAnt
+For example, if you want to train a policy for the Agents task by the PPO algorithm, run this line in `agents` folder:
+```
+python train.py --task=TenAnt --algo=ppo
+```
 
 ## Testing
 ### Testing Examples
 #### RL/MARL Examples
---task=MultiAntCircle --model_dir=...
---task=MultiIngenuity
---task=OneAnt
---task=TenAnt
+The trained model will be saved to `logs/${Task Name}/${Algorithm Name}`folder.
+
+To load a trained model and only perform inference (no training), pass `--test` as an argument, and pass `--model_dir` to specify the trained models which you want to load. For agents reinforcement learning, you need to pass `--model_dir` to specify exactly what .pt model you want to load. An example of PPO algorithm is as follows:
+```
+python train.py --task=TenAnt --algo=ppo --model_dir=logs/ten_ant/ppo/ppo_seed0/model_5000.pt --test
+```
 
