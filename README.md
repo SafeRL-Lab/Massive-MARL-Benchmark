@@ -24,7 +24,7 @@ Ants and ingenuities provide a set of multi-agent manipulation tasks and RL algo
 
 * **Isaac Efficiency:** Multiple agents are built into IsaacGym, which supports running multiple agents in thousands of environments simultaneously.
 * **Mluti-agents Cooperation:** These multi-agents work together to accomplish the same task. This collaboration is asynchronous. In the asynchronous case, agents can perform actions independently of each other, but still need to communicate and coordinate with each other to ensure that they ultimately reach a common goal.
-* **Task Diversity:**
+* **Task Diversity:** We introduce various manipulation tasks for multi-agents (e.g., circles, pushing, paralleling...); the diversity of tasks allows for better testing of RL algorithms.
 * **Quick Demos:**
 
 
