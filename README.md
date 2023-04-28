@@ -22,8 +22,8 @@ This repository contains complex multi-agent control tasks. Multiple ants and in
 
 Ants and ingenuities provide a set of multi-agent manipulation tasks and RL algorithms. Better coordination and manipulation of multi-agents is a challenge for researchers. The multi-agent tasks developments have the following characteristics:
 
-* **Isaac Efficiency:**
-* **Mluti-agents Cooperation:**
+* **Isaac Efficiency:** Multiple agents are built into IsaacGym, which supports running multiple agents in thousands of environments simultaneously.
+* **Mluti-agents Cooperation:** These multi-agents work together to accomplish the same task. This collaboration is asynchronous. In the asynchronous case, agents can perform actions independently of each other, but still need to communicate and coordinate with each other to ensure that they ultimately reach a common goal.
 * **Task Diversity:**
 * **Quick Demos:**
 
