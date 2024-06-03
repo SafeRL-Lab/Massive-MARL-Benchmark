@@ -1,0 +1,16 @@
+Metadata-Version: 2.1
+Name: agents
+Version: 0.1.2
+Summary: Benchmark environments for Agents in NVIDIA IsaacGym.
+Home-page: UNKNOWN
+Author: cypypccpy
+License: UNKNOWN
+Keywords: robotics,rl
+Platform: UNKNOWN
+Classifier: Natural Language :: English
+Classifier: Programming Language :: Python :: 3.7
+Requires-Python: >=3.6
+License-File: LICENSE
+
+UNKNOWN
+
